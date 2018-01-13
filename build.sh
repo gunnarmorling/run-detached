@@ -23,10 +23,10 @@
 # Copyright (c) 2010-2011 Emmanuel Bernard
 # Copyright (c) 2011 Sanne Grinovero
 
-#the cloned repo will live in ../DIRECTORY_ROOT/REPO_DIRECTORY
-DIRECTORY_ROOT="../privatebuild/"
+# The cloned repo will live in ../DIRECTORY_ROOT/REPO_DIRECTORY
+DIRECTORY_ROOT="../_background-build/"
 
-#get the lastest part of the directory name
+# Get the lastest part of the directory name
 IFS="/"
 SPLIT_DIR=(`pwd`)
 SIZE=${#SPLIT_DIR[@]}
@@ -38,9 +38,11 @@ DIRECTORY="${DIRECTORY_ROOT}${DIRECTORY_SUFFIX}"
 
 BRANCH=`git branch | grep "*" | awk '{print $NF}'`
 
-#fresh clone
+# Check out worktree with current branch
 rm -Rf $DIRECTORY
-git clone -slb "$BRANCH" . $DIRECTORY
+git worktree prune
+git worktree add --detach $DIRECTORY $BRANCH
+
 cd $DIRECTORY
 
 echo ""
