@@ -25,6 +25,24 @@
 
 # The cloned repo will live in ../DIRECTORY_ROOT/REPO_DIRECTORY
 DIRECTORY_ROOT="../_background-build/"
+START_TIME=$SECONDS
+
+NORMAL=$(tput sgr0)
+GREEN=$(tput setaf 2; tput bold)
+WHITE=$(tput setaf 7; tput bold)
+RED=$(tput setaf 1)
+
+function red() {
+    echo -e "$RED$*$NORMAL"
+}
+
+function green() {
+    echo -e "$GREEN$*$NORMAL"
+}
+
+function white() {
+    echo -e "$WHITE$*$NORMAL"
+}
 
 # Get the lastest part of the directory name
 IFS="/"
@@ -37,6 +55,14 @@ IFS=""
 DIRECTORY="${DIRECTORY_ROOT}${DIRECTORY_SUFFIX}"
 
 BRANCH=`git branch | grep "*" | awk '{print $NF}'`
+COMMAND=$@
+
+echo ""
+white "***** Detached Build *****"
+echo "Branch  : $BRANCH"
+echo "Work dir: $EXECUTION_DIR"
+echo "Command : $COMMAND"
+echo ""
 
 # Check out worktree with current branch
 rm -Rf $DIRECTORY
@@ -45,36 +71,29 @@ git worktree add --detach $DIRECTORY $BRANCH
 
 cd $DIRECTORY
 
-echo ""
-echo "***** Working on branch $BRANCH *****"
-echo ""
+eval $(printf "%q " "$@")
+STATUS=$?
+
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 say() {
     if [ `uname -s` == "Darwin" ]; then
         # On Mac OS, notify via Notification Center
-        osascript -e "display notification \"Build finished\" with title \"Maven - Branch $BRANCH - $RESULT\""
+        osascript -e "display notification \"$COMMAND\" with title \"$RESULT @ $DIRECTORY_SUFFIX ($(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec) \" subtitle \" Branch: $BRANCH\""
     fi
     if [ `uname -s` == "Linux" ]; then
         # On Linux, notify via notify-send
-        which notify-send && notify-send "Maven - branch $BRANCH" "$RESULT"
+        which notify-send && notify-send "$RESULT @ $DIRECTORY_SUFFIX ($BRANCH, $(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec)"
     fi
 }
 
-if [ -e "pom.xml" ]; then
-  if [[ $# -eq 0 ]]; then
-    mvn clean install
-  else
-    mvn "$@"
-  fi
-
-  if [ $? -eq 0 ]; then
-    RESULT="Build SUCCESS"
-    echo $RESULT
+if [ $STATUS -eq 0 ]; then
+    RESULT="SUCCESS"
     say
-  else
-    RESULT="Build FAILURE"
-    echo $RESULT
+    green "Detached build - $RESULT"
+else
+    RESULT="FAILURE"
     say
-    exit $?
-  fi
+    red "Detached build - $RESULT"
+    exit $STATUS
 fi
