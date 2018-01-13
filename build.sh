@@ -49,8 +49,8 @@ echo ""
 
 say() {
     if [ `uname -s` == "Darwin" ]; then
-        # On Mac OS, notify via Growl
-        which -s growlnotify && growlnotify --name Maven --sticky --message "Maven - Branch $BRANCH - $RESULT"
+        # On Mac OS, notify via Notification Center
+        osascript -e "display notification \"Build finished\" with title \"Maven - Branch $BRANCH - $RESULT\""
     fi
     if [ `uname -s` == "Linux" ]; then
         # On Linux, notify via notify-send
