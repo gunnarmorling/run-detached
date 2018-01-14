@@ -42,6 +42,12 @@ function white() {
     echo -e "$WHITE$*$NORMAL"
 }
 
+if [[ $(git status -s) ]]
+then
+    echo "The working directory is dirty. Please commit any pending changes."
+    exit 1;
+fi
+
 # Get the last part of the git repo root dir name
 REPO_ROOT=`git rev-parse --show-toplevel`
 IFS="/"
