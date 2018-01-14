@@ -23,7 +23,19 @@
 # Copyright (c) 2010-2011 Emmanuel Bernard
 # Copyright (c) 2011 Sanne Grinovero
 
+# http://redsymbol.net/articles/unofficial-bash-strict-mode/
+set -euo pipefail
+
 START_TIME=$SECONDS
+
+if [[ $(git status -s) ]]
+then
+    echo "The working directory is dirty. Please commit any pending changes."
+    exit 1;
+fi
+
+# Constants and functions
+DETACHED_BUILD_DIR_NAME="_detached_build"
 
 NORMAL=$(tput sgr0)
 GREEN=$(tput setaf 2; tput bold)
@@ -42,34 +54,41 @@ function white() {
     echo -e "$WHITE$*$NORMAL"
 }
 
-if [[ $(git status -s) ]]
-then
-    echo "The working directory is dirty. Please commit any pending changes."
-    exit 1;
-fi
+function notify() {
+    if [ `uname -s` == "Darwin" ]; then
+        # On Mac OS, notify via Notification Center
+        osascript -e "display notification \"$COMMAND\" with title \"$RESULT @ $REPO_NAME ($(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec) \" subtitle \" Branch: $BRANCH\""
+    fi
+    if [ `uname -s` == "Linux" ]; then
+        # On Linux, notify via notify-send
+        which notify-send && notify-send "$RESULT @ $REPO_NAME ($BRANCH, $(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec)"
+    fi
+}
+
+REPO_ROOT=`git rev-parse --show-toplevel`
+DETACHED_BUILD_DIR="$REPO_ROOT/../$DETACHED_BUILD_DIR_NAME/"
+mkdir -p "$DETACHED_BUILD_DIR"
+DETACHED_BUILD_DIR=`cd "$DETACHED_BUILD_DIR" && pwd`
 
 # Get the last part of the git repo root dir name
-REPO_ROOT=`git rev-parse --show-toplevel`
 IFS="/"
 SPLIT_DIR=($REPO_ROOT)
 SIZE=${#SPLIT_DIR[@]}
 let LAST_INDEX=$SIZE-1
-DIRECTORY_SUFFIX=${SPLIT_DIR[$LAST_INDEX]}
+REPO_NAME=${SPLIT_DIR[$LAST_INDEX]}
 IFS=""
 
-# The cloned repo will live in ../DIRECTORY_ROOT/REPO_DIRECTORY
-mkdir -p "$REPO_ROOT/../_background-build/"
-DIRECTORY_ROOT=`cd "$REPO_ROOT/../_background-build/" && pwd`
-WORKTREE_DIRECTORY="${DIRECTORY_ROOT}/${DIRECTORY_SUFFIX}"
+# The worktree will live in REPO_ROOT/../DETACHED_BUILD_DIR_NAME/REPO_NAME
+WORKTREE_DIRECTORY="${DETACHED_BUILD_DIR}/${REPO_NAME}"
 
-# Get the worktree dir to go to; either the worktree dir itself or a subdir of it
+# Get the execution dir to go to; either the worktree dir itself or a sub-dir of it,
+# when invoked from a sub-dir of the git repo
 CURRENT_DIR=`pwd`
 if [ $CURRENT_DIR = $REPO_ROOT ]; then
-    REL_PATH=""
+    EXECUTION_DIR=$WORKTREE_DIRECTORY
 else
-    REL_PATH=`echo $CURRENT_DIR | sed 's|'$REPO_ROOT'/|/|'`
+    EXECUTION_DIR=$WORKTREE_DIRECTORY`echo $CURRENT_DIR | sed 's|'$REPO_ROOT'/|/|'`
 fi
-EXECUTION_DIR=$WORKTREE_DIRECTORY$REL_PATH
 
 BRANCH=`git branch | grep "*" | awk '{print $NF}'`
 COMMAND=$@
@@ -88,29 +107,23 @@ git worktree add --detach $WORKTREE_DIRECTORY $BRANCH
 
 cd $EXECUTION_DIR
 
+# Don't fail immediately upon return code <> 0, instead show the notification
+set +e
+
+# Execute the given command
 eval $(printf "%q " "$@")
 STATUS=$?
+set -e
 
 ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-say() {
-    if [ `uname -s` == "Darwin" ]; then
-        # On Mac OS, notify via Notification Center
-        osascript -e "display notification \"$COMMAND\" with title \"$RESULT @ $DIRECTORY_SUFFIX ($(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec) \" subtitle \" Branch: $BRANCH\""
-    fi
-    if [ `uname -s` == "Linux" ]; then
-        # On Linux, notify via notify-send
-        which notify-send && notify-send "$RESULT @ $DIRECTORY_SUFFIX ($BRANCH, $(($ELAPSED_TIME/60)) min $(($ELAPSED_TIME%60)) sec)"
-    fi
-}
-
 if [ $STATUS -eq 0 ]; then
     RESULT="SUCCESS"
-    say
-    green "Detached build - $RESULT"
+    notify
+    green "Detached Build - $RESULT"
 else
     RESULT="FAILURE"
-    say
-    red "Detached build - $RESULT"
+    notify
+    red "Detached Build - $RESULT"
     exit $STATUS
 fi
