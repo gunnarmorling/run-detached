@@ -23,8 +23,6 @@
 # Copyright (c) 2010-2011 Emmanuel Bernard
 # Copyright (c) 2011 Sanne Grinovero
 
-# The cloned repo will live in ../DIRECTORY_ROOT/REPO_DIRECTORY
-DIRECTORY_ROOT="../_background-build/"
 START_TIME=$SECONDS
 
 NORMAL=$(tput sgr0)
@@ -44,15 +42,28 @@ function white() {
     echo -e "$WHITE$*$NORMAL"
 }
 
-# Get the lastest part of the directory name
+# Get the last part of the git repo root dir name
+REPO_ROOT=`git rev-parse --show-toplevel`
 IFS="/"
-SPLIT_DIR=(`pwd`)
+SPLIT_DIR=($REPO_ROOT)
 SIZE=${#SPLIT_DIR[@]}
 let LAST_INDEX=$SIZE-1
 DIRECTORY_SUFFIX=${SPLIT_DIR[$LAST_INDEX]}
 IFS=""
 
-DIRECTORY="${DIRECTORY_ROOT}${DIRECTORY_SUFFIX}"
+# The cloned repo will live in ../DIRECTORY_ROOT/REPO_DIRECTORY
+mkdir -p "$REPO_ROOT/../_background-build/"
+DIRECTORY_ROOT=`cd "$REPO_ROOT/../_background-build/" && pwd`
+WORKTREE_DIRECTORY="${DIRECTORY_ROOT}/${DIRECTORY_SUFFIX}"
+
+# Get the worktree dir to go to; either the worktree dir itself or a subdir of it
+CURRENT_DIR=`pwd`
+if [ $CURRENT_DIR = $REPO_ROOT ]; then
+    REL_PATH=""
+else
+    REL_PATH=`echo $CURRENT_DIR | sed 's|'$REPO_ROOT'/|/|'`
+fi
+EXECUTION_DIR=$WORKTREE_DIRECTORY$REL_PATH
 
 BRANCH=`git branch | grep "*" | awk '{print $NF}'`
 COMMAND=$@
@@ -65,11 +76,11 @@ echo "Command : $COMMAND"
 echo ""
 
 # Check out worktree with current branch
-rm -Rf $DIRECTORY
+rm -Rf $WORKTREE_DIRECTORY
 git worktree prune
-git worktree add --detach $DIRECTORY $BRANCH
+git worktree add --detach $WORKTREE_DIRECTORY $BRANCH
 
-cd $DIRECTORY
+cd $EXECUTION_DIR
 
 eval $(printf "%q " "$@")
 STATUS=$?
