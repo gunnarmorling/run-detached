@@ -5,7 +5,7 @@ allowing you to continue other work in the main work area in between.
 A notification is sent upon completion of the command executed in the worktree,
 if your OS supports it:
 
-* on Mac OS, install Growl and grownnotifier
+* on Mac OS X, the Notification Center is used
 * on Linux, install send-notify
 
 ## Usage
