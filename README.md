@@ -33,7 +33,7 @@ This lets you run the tool like so:
 
 ## Acknowledgements
 
-This script is based on build.sh by Emmanuel Bernard (https://gist.github.com/emmanuelbernard/787631).
+This script is based on [build.sh](https://gist.github.com/emmanuelbernard/787631) by Emmanuel Bernard.
 
 Many thanks to David Gageot, Emmanuel Bernard and Sanne Grinovero for their work on the
 original script. The following changes have been applied:
@@ -44,9 +44,6 @@ original script. The following changes have been applied:
 * allowing to run commands from within sub-directories of the git repo
 * aborting if the workarea is dirty
 
-Released under the WTFPL license version 2 http://sam.zoy.org/wtfpl/
+Released under the [WTFPL license version 2](http://sam.zoy.org/wtfpl/)
 
-Copyright (c) 2010 David Gageot
-Copyright (c) 2010-2011 Emmanuel Bernard
-Copyright (c) 2011 Sanne Grinovero
-Copyright (c) 2018 Gunnar Morling
+Copyright (c) 2010 David Gageot, 2010-2011 Emmanuel Bernard, 2011 Sanne Grinovero, 2018 Gunnar Morling
